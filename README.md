@@ -15,14 +15,12 @@ The project artifacts are organized to meet the submission requirements, ensurin
 Individual_Assignment_Matrix_Multiplication/
 
 ├── Codes/
-
 │   ├── C++ code/          
 │   ├── Java code/           
 │   ├── Python code/         
 │   └── Rust code/           
 ├── Datos/                  
 └── Documentacion/        
-    └── Matrix_Multiplication_Paper.pdf
 
 
 How to Run the Benchmarks
