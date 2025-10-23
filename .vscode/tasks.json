@@ -1,0 +1,32 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            // Esta tarea es para la compilación optimizada del benchmark.
+            "label": "C/C++: Build Optimized Runner",
+            "type": "cppbuild",
+            "command": "cl.exe",
+            "args": [
+                "/EHsc", // Manejo de excepciones estándar
+                "/O2",   // ¡FLAG DE OPTIMIZACIÓN CRUCIAL!
+                "/nologo",
+                // Compila ambos archivos de código fuente
+                "${workspaceFolder}/Codes/CppCcode/matrix.cpp",
+                "${workspaceFolder}/Codes/CppCcode/test-c++.cpp",
+                // Nombra el ejecutable como matrix_runner.exe
+                "/Fe:${fileDirname}/matrix_runner.exe"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$msCompile"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "Builds the optimized benchmark runner for C++."
+        }
+    ]
+}
