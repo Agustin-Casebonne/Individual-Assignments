@@ -7,7 +7,7 @@ public class TestBenchmark {
         final int RUNS = 5;
         final int[] MATRIX_SIZES = {512, 1024, 1536};
 
-        System.out.println("--- Java Matrix Multiplication Benchmark (Standard IJK) ---");
+        System.out.println("--- Java Sparse Matrix-Vector Benchmark (SpMV – CSR) ---");
 
         OperatingSystemMXBean osBean =
                 (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
@@ -15,10 +15,8 @@ public class TestBenchmark {
         for (int N : MATRIX_SIZES) {
             double avgTime = MatrixBenchmark.runBenchmark(N, RUNS);
 
-            // CPU load (en porcentaje)
             double cpuLoad = osBean.getProcessCpuLoad() * 100.0;
 
-            // Memoria usada por el proceso (en MB)
             long memUsed = (Runtime.getRuntime().totalMemory()
                     - Runtime.getRuntime().freeMemory()) / (1024 * 1024);
 

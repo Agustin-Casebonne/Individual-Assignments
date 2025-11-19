@@ -2,19 +2,23 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "java",
+            "name": "TestBenchmark",
+            "request": "launch",
+            "mainClass": "TestBenchmark",
+            "projectName": "Individual-Assignments_87b987d7"
+        },
+        {
             "name": "Run Optimized Benchmark",
             "type": "cppvsdbg",
             "request": "launch",
-            // Ajuste de la ruta para ser más robusta, utilizando la variable de entorno
-            "program": "${workspaceFolder}/Codes/CppCcode/matrix_runner.exe", 
+            "program": "${workspaceFolder}/Codes/CppCcode/matrix_runner.exe",
             "args": [],
             "stopAtEntry": false,
-            // Aseguramos que la carpeta de trabajo sea la carpeta del código
             "cwd": "${workspaceFolder}/Codes/CppCcode",
             "environment": [],
             "externalConsole": true,
-            // Antes de ejecutar, compila la tarea optimizada.
-            "preLaunchTask": "C/C++: Build Optimized Runner" 
+            "preLaunchTask": "C/C++: Build Optimized Runner"
         }
     ]
 }
