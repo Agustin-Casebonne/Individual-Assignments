@@ -1,29 +1,26 @@
-Big Data Course: Individual Assignment (Matrix Multiplication Benchmark)
+# Matrix Multiplication Benchmarking Project 🚀
 
-Project Overview (Assignment 1)
+**Author:** Agustín Casebonne
+**Course:** Individual Assignment - High Performance Computing
+**Date:** November 2025
 
-This repository contains the code and documentation for the "Basic Matrix Multiplication in Different Languages" assignment for the Big Data course at the Universidad de Las Palmas de Gran Canaria (ULPGC).
+## 📋 Overview
 
-The main objective of this assignment is to conduct a comparative performance analysis (benchmarking) of the standard $O(N^3)$ matrix multiplication algorithm implemented in three different languages: C++, Java, and Python (with Rust included as an optional high-performance language).
+This repository contains a rigorous comparative analysis of matrix multiplication algorithms implemented in **C++, Java, Python, and Rust**. The study focuses on performance profiling, memory management, and the impact of parallelization across different programming paradigms.
 
-The study focuses on measuring and analyzing execution time, scalability, and computational overhead as the matrix size ($N$) increases, adhering to professional benchmarking and profiling methodologies.
+The project is divided into two key stages:
+1.  **Stage 1: Dense Matrix Multiplication:** Standard $O(N^3)$ algorithm.
+2.  **Stage 2: Sparse Matrix Multiplication (SpMV):** Memory-bound $O(N_{nz})$ algorithm using **CSR (Compressed Sparse Row)** format.
 
-Repository Structure
+## 📂 Project Structure
 
-The project artifacts are organized to meet the submission requirements, ensuring separation between implementation, testing data, and final documentation.
-
-Individual_Assignment_Matrix_Multiplication/
-
+```text
+.
 ├── Codes/
-
-│   ├── C++ code/          
-│   ├── Java code/           
-│   ├── Python code/         
-│   └── Rust code/           
-├── Datos/                  
-└── Documentacion/        
-
-
-How to Run the Benchmarks
-
-All runner files (test-c++.cpp, TestBenchmark.java, test_python.py, matrix_rust.rs) are configured to run 5 trials for matrix sizes $N \in \{512, 1024, 1536\}$.
+│   ├── CppCcode/       # C++ Implementation (Raw pointers, std::thread)
+│   ├── JavaCode/       # Java Implementation (Native threads, JIT)
+│   ├── Python code/    # Python Implementation (Pure Python)
+│   └── Rust code/      # Rust Implementation (Arc, Mutex, Safety checks)
+├── Data/               # Benchmarking logs, screenshots, and plots
+├── Documentation/      # PDF Reports and Summaries
+└── README.md
