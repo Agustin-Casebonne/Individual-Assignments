@@ -12,13 +12,4 @@ This stage benchmarks **Sparse Matrix–Vector Multiplication (SpMV)** using the
 
 The objective is to compare **sequential vs. parallel performance**, **speedup**, **efficiency**, and **memory usage** across languages.
 
-## 📂 Project Structure
 
-.
-├── Codes/
-│ ├── JavaCode/
-│ ├── Python code/
-│ └── Rust code/
-├── Data/
-├── Documentation/
-└── README.md
