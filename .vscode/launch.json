@@ -3,6 +3,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "Main",
+            "projectName": "Individual-Assignments_87b987d7"
+        },
+        {
+            "type": "java",
             "name": "TestBenchmark",
             "request": "launch",
             "mainClass": "TestBenchmark",

@@ -1,23 +1,14 @@
+#include "matrix.h"
 #include <iostream>
 #include <vector>
 #include <random>
 #include <chrono>
-#include <iomanip>
 #include <omp.h>
-#include "matrix.h"
-
+#include <iomanip>
 using namespace std;
 using namespace std::chrono;
 
-
-struct CSRMatrix {
-    vector<double> values;  
-    vector<int> colIndex;  
-    vector<int> rowPtr;      
-    int n;
-};
-
-
+// Generación de matriz dispersa en formato CSR
 CSRMatrix generate_sparse_matrix(int N, double sparsity = 0.95) {
     CSRMatrix M;
     M.n = N;
@@ -31,7 +22,7 @@ CSRMatrix generate_sparse_matrix(int N, double sparsity = 0.95) {
     for (int i = 0; i < N; i++) {
         int count = 0;
         for (int j = 0; j < N; j++) {
-            if (distrib(gen) > sparsity) {  
+            if (distrib(gen) > sparsity) {
                 M.values.push_back(distrib(gen));
                 M.colIndex.push_back(j);
                 count++;
@@ -43,20 +34,20 @@ CSRMatrix generate_sparse_matrix(int N, double sparsity = 0.95) {
     return M;
 }
 
-
+// Producto matriz-vector secuencial
 void spmv_sequential(const CSRMatrix& A, const vector<double>& x, vector<double>& y) {
     int N = A.n;
     y.assign(N, 0.0);
 
     for (int i = 0; i < N; i++) {
         double sum = 0.0;
-        for (int k = A.rowPtr[i]; k < A.rowPtr[i + 1]; k++) {
+        for (int k = A.rowPtr[i]; k < A.rowPtr[i + 1]; k++)
             sum += A.values[k] * x[A.colIndex[k]];
-        }
         y[i] = sum;
     }
 }
 
+// Producto matriz-vector paralelo
 void spmv_parallel(const CSRMatrix& A, const vector<double>& x, vector<double>& y) {
     int N = A.n;
     y.assign(N, 0.0);
@@ -64,19 +55,31 @@ void spmv_parallel(const CSRMatrix& A, const vector<double>& x, vector<double>& 
 #pragma omp parallel for schedule(static)
     for (int i = 0; i < N; i++) {
         double sum = 0.0;
-        for (int k = A.rowPtr[i]; k < A.rowPtr[i + 1]; k++) {
+        for (int k = A.rowPtr[i]; k < A.rowPtr[i + 1]; k++)
             sum += A.values[k] * x[A.colIndex[k]];
-        }
         y[i] = sum;
     }
 }
 
+// Producto matriz-vector vectorizado (simulado para MSVC, sin #pragma omp simd)
+void spmv_vectorized(const CSRMatrix& A, const vector<double>& x, vector<double>& y) {
+    int N = A.n;
+    y.assign(N, 0.0);
 
-double run_benchmark(int N, int RUNS) {
-    const double SPARSITY = 0.95;
+#pragma omp parallel for schedule(static)
+    for (int i = 0; i < N; i++) {
+        double sum = 0.0;
+        // #pragma omp simd  // Comentado para MSVC
+        for (int k = A.rowPtr[i]; k < A.rowPtr[i + 1]; k++)
+            sum += A.values[k] * x[A.colIndex[k]];
+        y[i] = sum;
+    }
+}
 
-    CSRMatrix A = generate_sparse_matrix(N, SPARSITY);
-    vector<double> x(N), y(N), y_par(N);
+// Benchmark completo
+void run_benchmark(int N, int RUNS) {
+    CSRMatrix A = generate_sparse_matrix(N);
+    vector<double> x(N), y_seq(N), y_par(N), y_vec(N);
 
     random_device rd;
     mt19937 gen(rd());
@@ -86,30 +89,44 @@ double run_benchmark(int N, int RUNS) {
 
     cout << "Running C++ Sparse SpMV for N=" << N << " (" << RUNS << " runs)..." << endl;
 
-    long long total_seq = 0;
-    long long total_par = 0;
+    double total_seq = 0.0, total_par = 0.0, total_vec = 0.0;
 
     // Warm-up
-    spmv_sequential(A, x, y);
+    spmv_sequential(A, x, y_seq);
+    spmv_parallel(A, x, y_par);
+    spmv_vectorized(A, x, y_vec);
 
+    // Benchmark
     for (int r = 0; r < RUNS; r++) {
         auto start = high_resolution_clock::now();
-        spmv_sequential(A, x, y);
+        spmv_sequential(A, x, y_seq);
         auto end = high_resolution_clock::now();
-        total_seq += duration_cast<microseconds>(end - start).count();
+        total_seq += duration<double>(end - start).count();
 
         start = high_resolution_clock::now();
         spmv_parallel(A, x, y_par);
         end = high_resolution_clock::now();
-        total_par += duration_cast<microseconds>(end - start).count();
+        total_par += duration<double>(end - start).count();
+
+        start = high_resolution_clock::now();
+        spmv_vectorized(A, x, y_vec);
+        end = high_resolution_clock::now();
+        total_vec += duration<double>(end - start).count();
     }
 
-    double avg_seq = (double)total_seq / RUNS / 1'000'000.0;
-    double avg_par = (double)total_par / RUNS / 1'000'000.0;
+    double avg_seq = total_seq / RUNS;
+    double avg_par = total_par / RUNS;
+    double avg_vec = total_vec / RUNS;
 
-    cout << "Sequential: " << fixed << setprecision(6) << avg_seq << " s\n";
-    cout << "Parallel:   " << fixed << setprecision(6) << avg_par << " s\n";
-    cout << "Speedup: " << (avg_seq / avg_par) << "x\n";
+    double speedup_par = avg_seq / avg_par;
+    double speedup_vec = avg_seq / avg_vec;
+    int num_threads = omp_get_max_threads();
+    double efficiency_par = speedup_par / num_threads;
+    double efficiency_vec = speedup_vec / num_threads;
 
-    return avg_seq;
+    cout << fixed << setprecision(6);
+    cout << "Sequential: " << avg_seq << " s\n";
+    cout << "Parallel:   " << avg_par << " s | Speedup: " << speedup_par << "x | Efficiency: " << efficiency_par << "\n";
+    cout << "Vectorized: " << avg_vec << " s | Speedup: " << speedup_vec << "x | Efficiency: " << efficiency_vec << "\n";
+    cout << "---------------------------------------------------------\n";
 }

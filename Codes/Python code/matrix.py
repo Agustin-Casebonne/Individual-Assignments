@@ -1,99 +1,93 @@
-import random
+import numpy as np
 import time
-import multiprocessing as mp
+import psutil
+from numba import njit, prange
+import os
 
+# --- Definición de la matriz CSR ---
+class CSRMatrix:
+    def __init__(self, n, values, col_index, row_ptr):
+        self.n = n
+        self.values = values
+        self.col_index = col_index
+        self.row_ptr = row_ptr
 
+    @staticmethod
+    def generate_sparse_matrix(n, density=0.1):
+        values = []
+        col_index = []
+        row_ptr = [0]
 
-def generate_sparse_matrix_csr(N, sparsity=0.95):
-    """
-    Generates a sparse matrix in CSR format.
-    sparsity = fraction of zeros.
-    """
+        for i in range(n):
+            count = 0
+            for j in range(n):
+                if np.random.random() > density:
+                    values.append(np.random.random())
+                    col_index.append(j)
+                    count += 1
+            row_ptr.append(row_ptr[-1] + count)
+        return CSRMatrix(n, np.array(values), np.array(col_index), np.array(row_ptr))
 
-    values = []
-    col_index = []
-    row_ptr = [0]
-
-    for i in range(N):
-        count = 0
-        for j in range(N):
-            if random.random() > sparsity:       
-                values.append(random.random())
-                col_index.append(j)
-                count += 1
-        row_ptr.append(row_ptr[-1] + count)
-
-    return values, col_index, row_ptr, N
-
-
-
-def spmv_sequential(values, col_index, row_ptr, N, x, y):
-    for i in range(N):
-        start = row_ptr[i]
-        end = row_ptr[i + 1]
-        s = 0.0
-        for idx in range(start, end):
-            s += values[idx] * x[col_index[idx]]
-        y[i] = s
-
-
-# Paralelo
-
-def _spmv_row_task(args):
-    """Trabajo para cada fila en modo paralelo"""
-    i, values, col_index, row_ptr, x = args
-    start = row_ptr[i]
-    end = row_ptr[i + 1]
-    total = 0.0
-    for idx in range(start, end):
-        total += values[idx] * x[col_index[idx]]
-    return total
-
-
-def spmv_parallel(values, col_index, row_ptr, N, x, y):
-    with mp.Pool(mp.cpu_count()) as pool:
-        results = pool.map(
-            _spmv_row_task,
-            [(i, values, col_index, row_ptr, x) for i in range(N)]
+    def memory_usage_mb(self):
+        total_bytes = (
+            self.values.nbytes +
+            self.col_index.nbytes +
+            self.row_ptr.nbytes
         )
-    for i in range(N):
-        y[i] = results[i]
+        return total_bytes / (1024*1024)
 
+# --- Operación SpMV ---
+@njit
+def spmv_seq(A_values, A_col, A_row, x):
+    n = len(A_row) - 1
+    y = np.zeros(n)
+    for i in range(n):
+        s = 0.0
+        for k in range(A_row[i], A_row[i+1]):
+            s += A_values[k] * x[A_col[k]]
+        y[i] = s
+    return y
 
+@njit(parallel=True)
+def spmv_par(A_values, A_col, A_row, x):
+    n = len(A_row) - 1
+    y = np.zeros(n)
+    for i in prange(n):
+        s = 0.0
+        for k in range(A_row[i], A_row[i+1]):
+            s += A_values[k] * x[A_col[k]]
+        y[i] = s
+    return y
 
-def run_benchmark(N, RUNS):
-    SPARSITY = 0.95
+# --- Benchmark ---
+def run_benchmark(n, runs=5, density=0.1):
+    matrix = CSRMatrix.generate_sparse_matrix(n, density)
+    x = np.random.random(n)
 
-    values, col_index, row_ptr, _ = generate_sparse_matrix_csr(N, SPARSITY)
-    x = [random.random() for _ in range(N)]
-    y = [0.0] * N
-    y_par = [0.0] * N
+    # Medir memoria
+    process = psutil.Process(os.getpid())
+    mem_before = process.memory_info().rss / (1024*1024)
 
-    print(f"Running Python Sparse SpMV for N={N} ({RUNS} runs)...")
+    # Secuencial
+    t0 = time.perf_counter()
+    for _ in range(runs):
+        y_seq = spmv_seq(matrix.values, matrix.col_index, matrix.row_ptr, x)
+    t1 = time.perf_counter()
+    avg_seq = (t1 - t0) / runs
 
-    total_seq = 0.0
-    total_par = 0.0
+    # Paralelo
+    t0 = time.perf_counter()
+    for _ in range(runs):
+        y_par = spmv_par(matrix.values, matrix.col_index, matrix.row_ptr, x)
+    t1 = time.perf_counter()
+    avg_par = (t1 - t0) / runs
 
-    # Warm-up
-    spmv_sequential(values, col_index, row_ptr, N, x, y)
+    speedup = avg_seq / avg_par if avg_par > 0 else float('inf')
+    efficiency = speedup / os.cpu_count() if os.cpu_count() else 0.0
+    mem_after = process.memory_info().rss / (1024*1024)
+    mem_usage = mem_after - mem_before + matrix.memory_usage_mb()
 
-    # Benchmark
-    for r in range(RUNS):
-        start = time.perf_counter()
-        spmv_sequential(values, col_index, row_ptr, N, x, y)
-        end = time.perf_counter()
-        total_seq += end - start
-
-        start = time.perf_counter()
-        spmv_parallel(values, col_index, row_ptr, N, x, y_par)
-        end = time.perf_counter()
-        total_par += end - start
-
-    avg_seq = total_seq / RUNS
-    avg_par = total_par / RUNS
-
-    print(f"Sequential: {avg_seq:.6f} s")
-    print(f"Parallel:   {avg_par:.6f} s")
-    print(f"Speedup: {avg_seq/avg_par:.2f}x")
-
-    return avg_seq
+    print(f"N={n}: Sequential {avg_seq:.6f}s | Parallel {avg_par:.6f}s | "
+          f"Speedup {speedup:.2f}x | Efficiency {efficiency:.2f}")
+    print(f"Memory usage: {mem_usage:.2f} MB")
+    print("---------------------------------------------------------")
