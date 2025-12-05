@@ -14,3 +14,11 @@ The objective is to compare **sequential vs. parallel performance**, **speedup**
 
 ## 📂 Project Structure
 
+.
+├── Codes/
+│ ├── JavaCode/
+│ ├── Python code/
+│ └── Rust code/
+├── Data/
+├── Documentation/
+└── README.md
